@@ -27,12 +27,12 @@ export const useCampaigns = () => {
     queryKey: ['campaigns'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('campaigns' as any)
+        .from('campaigns')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as Campaign[];
+      return (data || []) as Campaign[];
     },
   });
 };
@@ -46,11 +46,12 @@ export const useCreateCampaign = () => {
       if (!user) throw new Error('User not authenticated');
 
       const { data, error } = await supabase
-        .from('campaigns' as any)
+        .from('campaigns')
         .insert({
           ...campaignData,
-          user_id: user.id
-        } as any)
+          user_id: user.id,
+          status: campaignData.status || 'draft'
+        })
         .select()
         .single();
 
@@ -69,8 +70,8 @@ export const useUpdateCampaign = () => {
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Campaign> & { id: string }) => {
       const { data, error } = await supabase
-        .from('campaigns' as any)
-        .update(updates as any)
+        .from('campaigns')
+        .update(updates)
         .eq('id', id)
         .select()
         .single();

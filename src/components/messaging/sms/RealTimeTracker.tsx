@@ -51,14 +51,14 @@ export function RealTimeTracker() {
   const loadMessages = async () => {
     try {
       const { data, error } = await supabase
-        .from('message_history' as any)
+        .from('message_history')
         .select('*')
         .eq('type', 'sms')
         .order('created_at', { ascending: false })
         .limit(50);
 
       if (error) throw error;
-      setMessages(data || []);
+      setMessages((data || []) as MessageStatus[]);
     } catch (error) {
       console.error('Error loading messages:', error);
     } finally {

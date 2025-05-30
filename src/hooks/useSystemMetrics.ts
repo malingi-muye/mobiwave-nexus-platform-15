@@ -31,13 +31,13 @@ export const useSystemMetrics = () => {
     queryKey: ['system-metrics'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('system_metrics' as any)
+        .from('system_metrics')
         .select('*')
         .order('recorded_at', { ascending: false })
         .limit(100);
 
       if (error) throw error;
-      return data as SystemMetric[];
+      return (data || []) as SystemMetric[];
     },
   });
 };
@@ -47,12 +47,12 @@ export const useServiceStatus = () => {
     queryKey: ['service-status'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('service_status' as any)
+        .from('service_status')
         .select('*')
         .order('service_name');
 
       if (error) throw error;
-      return data as ServiceStatus[];
+      return (data || []) as ServiceStatus[];
     },
   });
 };
@@ -63,14 +63,14 @@ export const useUpdateServiceStatus = () => {
   return useMutation({
     mutationFn: async ({ service_name, status, ...updates }: Partial<ServiceStatus> & { service_name: string }) => {
       const { data, error } = await supabase
-        .from('service_status' as any)
+        .from('service_status')
         .upsert({
           service_name,
           status: status || 'healthy',
           last_health_check: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           ...updates,
-        } as any)
+        })
         .select()
         .single();
 

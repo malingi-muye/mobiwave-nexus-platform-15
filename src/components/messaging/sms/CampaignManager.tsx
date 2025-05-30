@@ -11,7 +11,11 @@ import { useCampaigns, useCreateCampaign, useUpdateCampaign } from "@/hooks/useC
 import { useToast } from "@/hooks/use-toast";
 import { CalendarDays, MessageSquare, Send, Edit3, Trash2, Play, Pause, BarChart3 } from "lucide-react";
 
-export function CampaignManager() {
+interface CampaignManagerProps {
+  onSuccess?: () => void;
+}
+
+export function CampaignManager({ onSuccess }: CampaignManagerProps) {
   const { data: campaigns, isLoading } = useCampaigns();
   const createCampaign = useCreateCampaign();
   const updateCampaign = useUpdateCampaign();
@@ -24,6 +28,7 @@ export function CampaignManager() {
     type: 'sms' as 'sms' | 'email' | 'whatsapp',
     content: '',
     subject: '',
+    status: 'draft' as 'draft' | 'scheduled' | 'active' | 'completed' | 'paused' | 'cancelled',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,10 +53,11 @@ export function CampaignManager() {
           title: "Campaign Created",
           description: "Your campaign has been successfully created.",
         });
+        onSuccess?.();
       }
 
       // Reset form
-      setFormData({ name: '', type: 'sms', content: '', subject: '' });
+      setFormData({ name: '', type: 'sms', content: '', subject: '', status: 'draft' });
       setShowCreateForm(false);
       setEditingCampaign(null);
     } catch (error) {
@@ -70,6 +76,7 @@ export function CampaignManager() {
         type: campaign.type || 'sms',
         content: campaign.content || '',
         subject: campaign.subject || '',
+        status: campaign.status || 'draft',
       });
       setEditingCampaign(campaign.id);
       setShowCreateForm(true);
@@ -213,7 +220,7 @@ export function CampaignManager() {
                   onClick={() => {
                     setShowCreateForm(false);
                     setEditingCampaign(null);
-                    setFormData({ name: '', type: 'sms', content: '', subject: '' });
+                    setFormData({ name: '', type: 'sms', content: '', subject: '', status: 'draft' });
                   }}
                 >
                   Cancel

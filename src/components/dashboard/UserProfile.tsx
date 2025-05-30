@@ -42,7 +42,7 @@ export const UserProfile = () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from('profiles' as any)
+        .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
@@ -58,14 +58,15 @@ export const UserProfile = () => {
       }
 
       if (data) {
-        setProfile(data);
+        const profileData = data as any;
+        setProfile(profileData);
         // Handle both new fields and legacy full_name
-        if (data.first_name && data.last_name) {
-          setFirstName(data.first_name);
-          setLastName(data.last_name);
-        } else if (data.full_name) {
+        if (profileData.first_name && profileData.last_name) {
+          setFirstName(profileData.first_name);
+          setLastName(profileData.last_name);
+        } else if (profileData.full_name) {
           // Try to split full_name into first and last
-          const parts = data.full_name.split(' ');
+          const parts = profileData.full_name.split(' ');
           setFirstName(parts[0] || "");
           setLastName(parts.slice(1).join(' ') || "");
         } else {
@@ -87,13 +88,13 @@ export const UserProfile = () => {
     setIsUpdating(true);
     try {
       const { error } = await supabase
-        .from('profiles' as any)
+        .from('profiles')
         .update({
           first_name: firstName,
           last_name: lastName,
           full_name: `${firstName} ${lastName}`.trim(), // Keep full_name in sync
           updated_at: new Date().toISOString(),
-        } as any)
+        })
         .eq('id', user.id);
 
       if (error) {
