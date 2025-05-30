@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -50,7 +51,7 @@ export function RealTimeTracker() {
   const loadMessages = async () => {
     try {
       const { data, error } = await supabase
-        .from('message_history')
+        .from('message_history' as any)
         .select('*')
         .eq('type', 'sms')
         .order('created_at', { ascending: false })

@@ -42,7 +42,7 @@ export const UserProfile = () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles' as any)
         .select('*')
         .eq('id', user.id)
         .single();
@@ -57,19 +57,21 @@ export const UserProfile = () => {
         return;
       }
 
-      setProfile(data);
-      // Handle both new fields and legacy full_name
-      if (data.first_name && data.last_name) {
-        setFirstName(data.first_name);
-        setLastName(data.last_name);
-      } else if (data.full_name) {
-        // Try to split full_name into first and last
-        const parts = data.full_name.split(' ');
-        setFirstName(parts[0] || "");
-        setLastName(parts.slice(1).join(' ') || "");
-      } else {
-        setFirstName("");
-        setLastName("");
+      if (data) {
+        setProfile(data);
+        // Handle both new fields and legacy full_name
+        if (data.first_name && data.last_name) {
+          setFirstName(data.first_name);
+          setLastName(data.last_name);
+        } else if (data.full_name) {
+          // Try to split full_name into first and last
+          const parts = data.full_name.split(' ');
+          setFirstName(parts[0] || "");
+          setLastName(parts.slice(1).join(' ') || "");
+        } else {
+          setFirstName("");
+          setLastName("");
+        }
       }
     } catch (error) {
       console.error('Profile fetch error:', error);
@@ -85,13 +87,13 @@ export const UserProfile = () => {
     setIsUpdating(true);
     try {
       const { error } = await supabase
-        .from('profiles')
+        .from('profiles' as any)
         .update({
           first_name: firstName,
           last_name: lastName,
           full_name: `${firstName} ${lastName}`.trim(), // Keep full_name in sync
           updated_at: new Date().toISOString(),
-        })
+        } as any)
         .eq('id', user.id);
 
       if (error) {
