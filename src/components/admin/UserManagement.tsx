@@ -1,24 +1,37 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, UserPlus, Search, Shield, Ban, Mail } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Users, UserPlus, Search, Shield, Ban, Mail, Edit } from 'lucide-react';
+import { useUsers, useUpdateUserStatus } from '@/hooks/useUsers';
+import { useUserRoles, useAllRoles, useAssignRole, useRemoveRole } from '@/hooks/useUserRoles';
+import { useToast } from '@/hooks/use-toast';
 
 export function UserManagement() {
-  const users = [
-    { id: 1, name: 'John Doe', email: 'john@example.com', role: 'admin', status: 'active', lastLogin: '2024-01-15' },
-    { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'user', status: 'active', lastLogin: '2024-01-14' },
-    { id: 3, name: 'Bob Johnson', email: 'bob@example.com', role: 'moderator', status: 'suspended', lastLogin: '2024-01-10' },
-    { id: 4, name: 'Alice Brown', email: 'alice@example.com', role: 'user', status: 'active', lastLogin: '2024-01-13' },
-  ];
+  const [searchQuery, setSearchQuery] = useState('');
+  const { data: users = [], isLoading } = useUsers();
+  const { data: roles = [] } = useAllRoles();
+  const updateUserStatus = useUpdateUserStatus();
+  const assignRole = useAssignRole();
+  const removeRole = useRemoveRole();
+  const { toast } = useToast();
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
+  const filteredUsers = users.filter(user => 
+    user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (user.first_name && user.first_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (user.last_name && user.last_name.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const getRoleColor = (roleName: string) => {
+    switch (roleName) {
+      case 'super_admin': return 'bg-purple-100 text-purple-800';
       case 'admin': return 'bg-red-100 text-red-800';
-      case 'moderator': return 'bg-blue-100 text-blue-800';
+      case 'manager': return 'bg-blue-100 text-blue-800';
+      case 'user': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -28,9 +41,53 @@ export function UserManagement() {
       case 'active': return 'bg-green-100 text-green-800';
       case 'suspended': return 'bg-yellow-100 text-yellow-800';
       case 'banned': return 'bg-red-100 text-red-800';
+      case 'inactive': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
+
+  const handleStatusChange = async (userId: string, newStatus: any) => {
+    try {
+      await updateUserStatus.mutateAsync({ userId, status: newStatus });
+      toast({
+        title: "Status Updated",
+        description: "User status has been updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update user status.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRoleAssign = async (userId: string, roleId: string) => {
+    try {
+      await assignRole.mutateAsync({ userId, roleId });
+      toast({
+        title: "Role Assigned",
+        description: "Role has been assigned successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to assign role.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -50,7 +107,7 @@ export function UserManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 mb-1">Total Users</p>
-                <p className="text-3xl font-bold text-gray-900">1,247</p>
+                <p className="text-3xl font-bold text-gray-900">{users.length}</p>
               </div>
               <div className="p-3 rounded-full bg-blue-50">
                 <Users className="w-6 h-6 text-blue-600" />
@@ -64,7 +121,9 @@ export function UserManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 mb-1">Active Users</p>
-                <p className="text-3xl font-bold text-gray-900">1,156</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {users.filter(u => u.status === 'active').length}
+                </p>
               </div>
               <div className="p-3 rounded-full bg-green-50">
                 <Shield className="w-6 h-6 text-green-600" />
@@ -77,8 +136,10 @@ export function UserManagement() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">New This Month</p>
-                <p className="text-3xl font-bold text-gray-900">89</p>
+                <p className="text-sm font-medium text-gray-600 mb-1">Admins</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {users.filter(u => u.user_roles.some(ur => ur.role.name === 'admin')).length}
+                </p>
               </div>
               <div className="p-3 rounded-full bg-purple-50">
                 <UserPlus className="w-6 h-6 text-purple-600" />
@@ -92,7 +153,9 @@ export function UserManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 mb-1">Suspended</p>
-                <p className="text-3xl font-bold text-gray-900">91</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {users.filter(u => u.status === 'suspended').length}
+                </p>
               </div>
               <div className="p-3 rounded-full bg-red-50">
                 <Ban className="w-6 h-6 text-red-600" />
@@ -118,12 +181,13 @@ export function UserManagement() {
             <div className="flex gap-2">
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <Input placeholder="Search users..." className="pl-10 w-64" />
+                <Input 
+                  placeholder="Search users..." 
+                  className="pl-10 w-64"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                <UserPlus className="w-4 h-4 mr-2" />
-                Add User
-              </Button>
             </div>
           </div>
         </CardHeader>
@@ -132,14 +196,14 @@ export function UserManagement() {
             <TableHeader>
               <TableRow>
                 <TableHead>User</TableHead>
-                <TableHead>Role</TableHead>
+                <TableHead>Roles</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Last Login</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
+              {filteredUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -147,29 +211,54 @@ export function UserManagement() {
                         <Users className="w-4 h-4 text-gray-600" />
                       </div>
                       <div>
-                        <p className="font-medium">{user.name}</p>
+                        <p className="font-medium">
+                          {user.first_name && user.last_name 
+                            ? `${user.first_name} ${user.last_name}`
+                            : user.email.split('@')[0]
+                          }
+                        </p>
                         <p className="text-sm text-gray-500">{user.email}</p>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={getRoleColor(user.role)}>
-                      {user.role}
-                    </Badge>
+                    <div className="flex flex-wrap gap-1">
+                      {user.user_roles.map((userRole) => (
+                        <Badge key={userRole.id} className={getRoleColor(userRole.role.name)}>
+                          {userRole.role.name}
+                        </Badge>
+                      ))}
+                    </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={getStatusColor(user.status)}>
-                      {user.status}
-                    </Badge>
+                    <Select
+                      value={user.status}
+                      onValueChange={(value) => handleStatusChange(user.id, value)}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                        <SelectItem value="suspended">Suspended</SelectItem>
+                        <SelectItem value="banned">Banned</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </TableCell>
-                  <TableCell>{user.lastLogin}</TableCell>
+                  <TableCell>
+                    {user.last_login 
+                      ? new Date(user.last_login).toLocaleDateString()
+                      : 'Never'
+                    }
+                  </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm">
                         <Mail className="w-4 h-4" />
                       </Button>
                       <Button variant="outline" size="sm">
-                        Edit
+                        <Edit className="w-4 h-4" />
                       </Button>
                     </div>
                   </TableCell>

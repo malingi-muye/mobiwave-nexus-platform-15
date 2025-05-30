@@ -11,18 +11,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Mail, Save, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-interface Profile {
-  id: string;
-  email: string;
-  first_name: string | null;
-  last_name: string | null;
-  full_name: string | null;
-  avatar_url: string | null;
-}
-
 export const UserProfile = () => {
   const { user, logout } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -41,41 +32,48 @@ export const UserProfile = () => {
     
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('profiles')
+      // Try to fetch from the new users table first
+      const { data: userData, error: userError } = await supabase
+        .from('users')
         .select('*')
         .eq('id', user.id)
         .single();
 
-      if (error) {
-        console.error('Error fetching profile:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load profile information.",
-          variant: "destructive",
-        });
-        return;
-      }
+      if (userData) {
+        setProfile(userData);
+        setFirstName(userData.first_name || "");
+        setLastName(userData.last_name || "");
+      } else if (userError && userError.code === 'PGRST116') {
+        // User not found in users table, try profiles table as fallback
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
 
-      if (data) {
-        const profileData = data as any;
-        setProfile(profileData);
-        // Handle both new fields and legacy full_name
-        if (profileData.first_name && profileData.last_name) {
-          setFirstName(profileData.first_name);
-          setLastName(profileData.last_name);
-        } else if (profileData.full_name) {
-          // Try to split full_name into first and last
-          const parts = profileData.full_name.split(' ');
-          setFirstName(parts[0] || "");
-          setLastName(parts.slice(1).join(' ') || "");
+        if (profileData) {
+          setProfile(profileData);
+          if (profileData.first_name && profileData.last_name) {
+            setFirstName(profileData.first_name);
+            setLastName(profileData.last_name);
+          } else if (profileData.full_name) {
+            const parts = profileData.full_name.split(' ');
+            setFirstName(parts[0] || "");
+            setLastName(parts.slice(1).join(' ') || "");
+          }
         } else {
-          setFirstName("");
-          setLastName("");
+          console.error('Error fetching profile:', profileError);
         }
+      } else {
+        console.error('Error fetching user:', userError);
       }
     } catch (error) {
       console.error('Profile fetch error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load profile information.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -87,18 +85,35 @@ export const UserProfile = () => {
 
     setIsUpdating(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
+      // Update in users table
+      const { error: userError } = await supabase
+        .from('users')
+        .upsert({
+          id: user.id,
+          email: user.email,
           first_name: firstName,
           last_name: lastName,
-          full_name: `${firstName} ${lastName}`.trim(), // Keep full_name in sync
           updated_at: new Date().toISOString(),
-        })
-        .eq('id', user.id);
+        });
 
-      if (error) {
-        throw error;
+      if (userError) {
+        console.error('User update error:', userError);
+      }
+
+      // Also update profiles table for backwards compatibility
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          email: user.email,
+          first_name: firstName,
+          last_name: lastName,
+          full_name: `${firstName} ${lastName}`.trim(),
+          updated_at: new Date().toISOString(),
+        });
+
+      if (profileError) {
+        console.error('Profile update error:', profileError);
       }
 
       toast({
@@ -106,7 +121,6 @@ export const UserProfile = () => {
         description: "Your profile has been successfully updated.",
       });
 
-      // Refresh profile data
       fetchProfile();
     } catch (error) {
       console.error('Profile update error:', error);
