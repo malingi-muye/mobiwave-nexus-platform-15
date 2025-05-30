@@ -412,6 +412,81 @@ export type Database = {
           },
         ]
       }
+      service_status: {
+        Row: {
+          cpu_usage: number
+          created_at: string
+          id: string
+          instances: number
+          last_health_check: string
+          memory_usage: number
+          request_rate: string | null
+          service_name: string
+          status: string
+          updated_at: string
+          uptime_percentage: number
+          version: string | null
+        }
+        Insert: {
+          cpu_usage?: number
+          created_at?: string
+          id?: string
+          instances?: number
+          last_health_check?: string
+          memory_usage?: number
+          request_rate?: string | null
+          service_name: string
+          status: string
+          updated_at?: string
+          uptime_percentage?: number
+          version?: string | null
+        }
+        Update: {
+          cpu_usage?: number
+          created_at?: string
+          id?: string
+          instances?: number
+          last_health_check?: string
+          memory_usage?: number
+          request_rate?: string | null
+          service_name?: string
+          status?: string
+          updated_at?: string
+          uptime_percentage?: number
+          version?: string | null
+        }
+        Relationships: []
+      }
+      system_metrics: {
+        Row: {
+          created_at: string
+          id: string
+          labels: Json | null
+          metric_name: string
+          metric_type: string
+          metric_value: number
+          recorded_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          labels?: Json | null
+          metric_name: string
+          metric_type: string
+          metric_value: number
+          recorded_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          labels?: Json | null
+          metric_name?: string
+          metric_type?: string
+          metric_value?: number
+          recorded_at?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           agent_id: string | null
