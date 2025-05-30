@@ -16,6 +16,7 @@ interface Profile {
   email: string;
   first_name: string | null;
   last_name: string | null;
+  full_name: string | null;
   avatar_url: string | null;
 }
 
@@ -57,8 +58,19 @@ export const UserProfile = () => {
       }
 
       setProfile(data);
-      setFirstName(data.first_name || "");
-      setLastName(data.last_name || "");
+      // Handle both new fields and legacy full_name
+      if (data.first_name && data.last_name) {
+        setFirstName(data.first_name);
+        setLastName(data.last_name);
+      } else if (data.full_name) {
+        // Try to split full_name into first and last
+        const parts = data.full_name.split(' ');
+        setFirstName(parts[0] || "");
+        setLastName(parts.slice(1).join(' ') || "");
+      } else {
+        setFirstName("");
+        setLastName("");
+      }
     } catch (error) {
       console.error('Profile fetch error:', error);
     } finally {
@@ -77,6 +89,7 @@ export const UserProfile = () => {
         .update({
           first_name: firstName,
           last_name: lastName,
+          full_name: `${firstName} ${lastName}`.trim(), // Keep full_name in sync
           updated_at: new Date().toISOString(),
         })
         .eq('id', user.id);
@@ -151,7 +164,7 @@ export const UserProfile = () => {
         <div className="flex items-center space-x-4">
           <Avatar className="w-16 h-16">
             <AvatarFallback className="bg-blue-100 text-blue-600 text-lg font-semibold">
-              {profile && firstName && lastName 
+              {firstName && lastName 
                 ? getInitials(firstName, lastName)
                 : user?.email?.charAt(0).toUpperCase() || "U"
               }
@@ -159,9 +172,9 @@ export const UserProfile = () => {
           </Avatar>
           <div>
             <h3 className="text-lg font-semibold">
-              {profile && firstName && lastName 
+              {firstName && lastName 
                 ? `${firstName} ${lastName}`
-                : "No name set"
+                : profile?.full_name || "No name set"
               }
             </h3>
             <div className="flex items-center gap-2 text-sm text-gray-600">

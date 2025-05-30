@@ -53,6 +53,69 @@ export type Database = {
           },
         ]
       }
+      campaigns: {
+        Row: {
+          clicked_count: number
+          completed_at: string | null
+          content: string
+          created_at: string
+          delivered_count: number
+          failed_count: number
+          id: string
+          name: string
+          opened_count: number
+          recipient_count: number
+          scheduled_at: string | null
+          sent_count: number
+          started_at: string | null
+          status: string
+          subject: string | null
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          clicked_count?: number
+          completed_at?: string | null
+          content: string
+          created_at?: string
+          delivered_count?: number
+          failed_count?: number
+          id?: string
+          name: string
+          opened_count?: number
+          recipient_count?: number
+          scheduled_at?: string | null
+          sent_count?: number
+          started_at?: string | null
+          status?: string
+          subject?: string | null
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          clicked_count?: number
+          completed_at?: string | null
+          content?: string
+          created_at?: string
+          delivered_count?: number
+          failed_count?: number
+          id?: string
+          name?: string
+          opened_count?: number
+          recipient_count?: number
+          scheduled_at?: string | null
+          sent_count?: number
+          started_at?: string | null
+          status?: string
+          subject?: string | null
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           address: string | null
@@ -159,6 +222,65 @@ export type Database = {
           },
         ]
       }
+      message_history: {
+        Row: {
+          campaign_id: string | null
+          content: string
+          created_at: string
+          delivered_at: string | null
+          error_message: string | null
+          failed_at: string | null
+          id: string
+          provider_message_id: string | null
+          recipient: string
+          sent_at: string | null
+          status: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          content: string
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          provider_message_id?: string | null
+          recipient: string
+          sent_at?: string | null
+          status?: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string | null
+          content?: string
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          provider_message_id?: string | null
+          recipient?: string
+          sent_at?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_history_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plans: {
         Row: {
           active: boolean | null
@@ -206,8 +328,10 @@ export type Database = {
           avatar_url: string | null
           created_at: string | null
           email: string
+          first_name: string | null
           full_name: string | null
           id: string
+          last_name: string | null
           phone: string | null
           role: string
           updated_at: string | null
@@ -216,8 +340,10 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string | null
           email: string
+          first_name?: string | null
           full_name?: string | null
           id: string
+          last_name?: string | null
           phone?: string | null
           role: string
           updated_at?: string | null
@@ -226,8 +352,10 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string | null
           email?: string
+          first_name?: string | null
           full_name?: string | null
           id?: string
+          last_name?: string | null
           phone?: string | null
           role?: string
           updated_at?: string | null

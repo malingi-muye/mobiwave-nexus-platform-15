@@ -1,65 +1,23 @@
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
+// Mock user credits data since this table doesn't exist yet
 export interface UserCredits {
-  id: string;
-  user_id: string;
-  credits_total: number;
-  credits_used: number;
   credits_remaining: number;
-  last_purchase_at?: string;
-  created_at: string;
-  updated_at: string;
+  credits_used: number;
+  total_credits: number;
 }
 
 export const useUserCredits = () => {
   return useQuery({
     queryKey: ['user-credits'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('user_credits')
-        .select('*')
-        .single();
-
-      if (error && error.code !== 'PGRST116') throw error;
-      return data as UserCredits | null;
-    },
-  });
-};
-
-export const useUpdateCredits = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (creditsToAdd: number) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const { data: currentCredits } = await supabase
-        .from('user_credits')
-        .select('credits_total')
-        .eq('user_id', user.id)
-        .single();
-
-      const newTotal = (currentCredits?.credits_total || 0) + creditsToAdd;
-
-      const { data, error } = await supabase
-        .from('user_credits')
-        .upsert({
-          user_id: user.id,
-          credits_total: newTotal,
-          last_purchase_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-credits'] });
+    queryFn: async (): Promise<UserCredits> => {
+      // Return mock data for now - this would typically come from Supabase
+      return {
+        credits_remaining: 500.00,
+        credits_used: 150.00,
+        total_credits: 650.00
+      };
     },
   });
 };
