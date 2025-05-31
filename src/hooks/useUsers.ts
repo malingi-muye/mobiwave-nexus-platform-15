@@ -43,7 +43,7 @@ export const useUsers = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return (data || []) as UserWithRoles[];
+      return data || [];
     },
   });
 };
@@ -65,7 +65,7 @@ export const useUser = (userId: string) => {
         .single();
 
       if (error) throw error;
-      return data as UserWithRoles;
+      return data;
     },
     enabled: !!userId,
   });

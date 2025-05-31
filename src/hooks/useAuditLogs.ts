@@ -37,7 +37,7 @@ export const useAuditLogs = (limit = 50) => {
         .limit(limit);
 
       if (error) throw error;
-      return (data || []) as AuditLog[];
+      return data || [];
     },
   });
 };

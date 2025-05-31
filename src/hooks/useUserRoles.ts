@@ -37,7 +37,7 @@ export const useUserRoles = (userId?: string) => {
         .eq('user_id', userId);
 
       if (error) throw error;
-      return (data || []) as UserRole[];
+      return data || [];
     },
     enabled: !!userId,
   });
@@ -53,7 +53,7 @@ export const useAllRoles = () => {
         .order('name');
 
       if (error) throw error;
-      return (data || []) as Role[];
+      return data || [];
     },
   });
 };
