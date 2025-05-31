@@ -2,6 +2,7 @@
 import React from 'react';
 import { useAuth } from './AuthProvider';
 import { Navigate } from 'react-router-dom';
+import { useHasRole } from '@/hooks/useCurrentUserRoles';
 
 interface RoleBasedRouteProps {
   children: React.ReactNode;
@@ -14,9 +15,9 @@ export const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({
   allowedRoles = [],
   redirectTo = '/dashboard'
 }) => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
 
-  if (isLoading) {
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -28,11 +29,18 @@ export const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({
     return <Navigate to="/auth" replace />;
   }
 
-  // For now, we'll assume all authenticated users can access both dashboards
-  // In a real app, you'd check user.user_metadata.role or a separate roles table
-  const userRole = user.user_metadata?.role || 'user';
+  // If no specific roles are required, allow access
+  if (allowedRoles.length === 0) {
+    return <>{children}</>;
+  }
 
-  if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
+  // Check if user has any of the required roles
+  const hasRequiredRole = allowedRoles.some(role => {
+    const { hasRole, isLoading } = useHasRole(role);
+    return !isLoading && hasRole;
+  });
+
+  if (!hasRequiredRole) {
     return <Navigate to={redirectTo} replace />;
   }
 

@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from './AuthProvider';
 import { Navigate } from 'react-router-dom';
+import { RoleBasedRedirect } from './RoleBasedRedirect';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -29,5 +30,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return <Navigate to="/auth" replace />;
   }
 
-  return <>{children}</>;
+  return (
+    <RoleBasedRedirect>
+      {children}
+    </RoleBasedRedirect>
+  );
 };

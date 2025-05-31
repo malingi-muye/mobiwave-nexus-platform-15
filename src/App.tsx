@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./components/auth/AuthProvider";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import { RoleBasedRoute } from "./components/auth/RoleBasedRoute";
 import { AuthPage } from "./components/auth/AuthPage";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
@@ -51,12 +52,14 @@ const App = () => (
               } 
             />
             
-            {/* Admin Dashboard Routes */}
+            {/* Admin Dashboard Routes - Require admin or super_admin role */}
             <Route 
               path="/admin" 
               element={
                 <ProtectedRoute>
-                  <AdminDashboard />
+                  <RoleBasedRoute allowedRoles={['admin', 'super_admin']} redirectTo="/dashboard">
+                    <AdminDashboard />
+                  </RoleBasedRoute>
                 </ProtectedRoute>
               } 
             />
@@ -64,7 +67,9 @@ const App = () => (
               path="/admin/users" 
               element={
                 <ProtectedRoute>
-                  <UserManagement />
+                  <RoleBasedRoute allowedRoles={['admin', 'super_admin']} redirectTo="/dashboard">
+                    <UserManagement />
+                  </RoleBasedRoute>
                 </ProtectedRoute>
               } 
             />
@@ -72,7 +77,9 @@ const App = () => (
               path="/admin/settings" 
               element={
                 <ProtectedRoute>
-                  <SystemSettings />
+                  <RoleBasedRoute allowedRoles={['admin', 'super_admin']} redirectTo="/dashboard">
+                    <SystemSettings />
+                  </RoleBasedRoute>
                 </ProtectedRoute>
               } 
             />
@@ -80,7 +87,9 @@ const App = () => (
               path="/admin/database" 
               element={
                 <ProtectedRoute>
-                  <DatabaseAdmin />
+                  <RoleBasedRoute allowedRoles={['admin', 'super_admin']} redirectTo="/dashboard">
+                    <DatabaseAdmin />
+                  </RoleBasedRoute>
                 </ProtectedRoute>
               } 
             />
@@ -88,7 +97,9 @@ const App = () => (
               path="/admin/analytics" 
               element={
                 <ProtectedRoute>
-                  <Analytics />
+                  <RoleBasedRoute allowedRoles={['admin', 'super_admin']} redirectTo="/dashboard">
+                    <Analytics />
+                  </RoleBasedRoute>
                 </ProtectedRoute>
               } 
             />
@@ -96,7 +107,9 @@ const App = () => (
               path="/admin/revenue" 
               element={
                 <ProtectedRoute>
-                  <RevenueReports />
+                  <RoleBasedRoute allowedRoles={['admin', 'super_admin']} redirectTo="/dashboard">
+                    <RevenueReports />
+                  </RoleBasedRoute>
                 </ProtectedRoute>
               } 
             />
@@ -104,7 +117,9 @@ const App = () => (
               path="/admin/logs" 
               element={
                 <ProtectedRoute>
-                  <SystemLogs />
+                  <RoleBasedRoute allowedRoles={['admin', 'super_admin']} redirectTo="/dashboard">
+                    <SystemLogs />
+                  </RoleBasedRoute>
                 </ProtectedRoute>
               } 
             />
@@ -112,7 +127,9 @@ const App = () => (
               path="/admin/monitoring" 
               element={
                 <ProtectedRoute>
-                  <Monitoring />
+                  <RoleBasedRoute allowedRoles={['admin', 'super_admin']} redirectTo="/dashboard">
+                    <Monitoring />
+                  </RoleBasedRoute>
                 </ProtectedRoute>
               } 
             />
