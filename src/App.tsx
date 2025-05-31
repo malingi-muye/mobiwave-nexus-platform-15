@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,6 +19,9 @@ import SystemLogs from "./pages/admin/SystemLogs";
 import Monitoring from "./pages/admin/Monitoring";
 import NotFound from "./pages/NotFound";
 import { BulkSMS } from "./components/messaging/BulkSMS";
+import { USSDService } from "./components/services/USSDService";
+import { VoiceService } from "./components/services/VoiceService";
+import { AirtimeService } from "./components/services/AirtimeService";
 
 const queryClient = new QueryClient();
 

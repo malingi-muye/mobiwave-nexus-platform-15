@@ -18,7 +18,9 @@ import {
   TrendingUp,
   Home,
   Calendar,
-  CreditCard
+  CreditCard,
+  Mic,
+  DollarSign
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -28,11 +30,13 @@ const clientSidebarItems = [
   { title: "Bulk Email", icon: Mail, badge: null, path: "/bulk-email", color: "bg-green-500" },
   { title: "WhatsApp", icon: MessageSquare, badge: "Pro", path: "/whatsapp", color: "bg-emerald-500" },
   { title: "USSD", icon: Phone, badge: null, path: "/ussd", color: "bg-orange-500" },
+  { title: "Voice Calls", icon: Mic, badge: null, path: "/voice", color: "bg-purple-500" },
+  { title: "Airtime", icon: CreditCard, badge: null, path: "/airtime", color: "bg-green-600" },
   { title: "Short Codes", icon: Phone, badge: null, path: "/short-codes", color: "bg-purple-500" },
   { title: "Surveys", icon: BarChart, badge: null, path: "/surveys", color: "bg-indigo-500" },
-  { title: "M-Pesa", icon: TrendingUp, badge: "Beta", path: "/mpesa", color: "bg-yellow-500" },
+  { title: "M-Pesa", icon: DollarSign, badge: "Beta", path: "/mpesa", color: "bg-yellow-500" },
   { title: "Campaigns", icon: Calendar, badge: null, path: "/campaigns", color: "bg-pink-500" },
-  { title: "Billing", icon: CreditCard, badge: null, path: "/billing", color: "bg-violet-500" },
+  { title: "Billing", icon: TrendingUp, badge: null, path: "/billing", color: "bg-violet-500" },
   { title: "Account Settings", icon: Settings, badge: null, path: "/settings", color: "bg-gray-500" },
 ];
 
