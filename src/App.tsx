@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -50,6 +51,30 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <BulkSMS />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/ussd" 
+              element={
+                <ProtectedRoute>
+                  <USSDService />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/voice" 
+              element={
+                <ProtectedRoute>
+                  <VoiceService />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/airtime" 
+              element={
+                <ProtectedRoute>
+                  <AirtimeService />
                 </ProtectedRoute>
               } 
             />
