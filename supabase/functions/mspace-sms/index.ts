@@ -12,13 +12,13 @@ interface SMSRequest {
   message: string
   sender_id?: string
   campaign_id?: string
+  scheduled_time?: string
 }
 
-interface MspaceResponse {
-  success: boolean
+interface MspaceApiResponse {
+  status: number
   message: string
   data?: any
-  error?: string
 }
 
 serve(async (req) => {
@@ -33,19 +33,21 @@ serve(async (req) => {
     )
 
     const mspaceApiKey = Deno.env.get('MSPACE_API_KEY')
-    if (!mspaceApiKey) {
-      throw new Error('MSPACE_API_KEY not configured')
+    const mspaceUserId = Deno.env.get('MSPACE_USER_ID')
+    
+    if (!mspaceApiKey || !mspaceUserId) {
+      throw new Error('MSPACE_API_KEY and MSPACE_USER_ID not configured')
     }
 
     const { action, ...data } = await req.json()
 
     switch (action) {
       case 'send_sms':
-        return await sendSMS(data as SMSRequest, mspaceApiKey, supabase)
+        return await sendSMS(data as SMSRequest, mspaceApiKey, mspaceUserId, supabase)
       case 'check_balance':
-        return await checkBalance(mspaceApiKey)
+        return await checkBalance(mspaceApiKey, mspaceUserId)
       case 'get_delivery_reports':
-        return await getDeliveryReports(data.message_ids, mspaceApiKey, supabase)
+        return await getDeliveryReports(data.message_ids, mspaceApiKey, mspaceUserId, supabase)
       default:
         throw new Error('Invalid action')
     }
@@ -61,20 +63,21 @@ serve(async (req) => {
   }
 })
 
-async function sendSMS(request: SMSRequest, apiKey: string, supabase: any): Promise<Response> {
-  const { recipients, message, sender_id = 'MOBIWAVE', campaign_id } = request
+async function sendSMS(request: SMSRequest, apiKey: string, userId: string, supabase: any): Promise<Response> {
+  const { recipients, message, sender_id = 'SENDER', campaign_id, scheduled_time } = request
 
-  // Calculate cost (assuming $0.05 per SMS)
-  const smsCount = Math.ceil(message.length / 160)
-  const totalCost = recipients.length * smsCount * 0.05
-
-  // Get user from auth header
+  // Get authenticated user
   const authHeader = Deno.env.get('AUTHORIZATION')
   const { data: { user } } = await supabase.auth.getUser(authHeader?.replace('Bearer ', ''))
   
   if (!user) {
     throw new Error('User not authenticated')
   }
+
+  // Calculate cost (Mspace pricing)
+  const smsCount = Math.ceil(message.length / 160)
+  const costPerSMS = 0.80 // KES per SMS as per Mspace pricing
+  const totalCost = recipients.length * smsCount * costPerSMS
 
   // Check user credits
   const { data: credits } = await supabase
@@ -88,26 +91,35 @@ async function sendSMS(request: SMSRequest, apiKey: string, supabase: any): Prom
   }
 
   const results = []
+  let successCount = 0
+  let failedCount = 0
   
   for (const recipient of recipients) {
     try {
-      // Send SMS via Mspace API
-      const response = await fetch('https://api.mspace.co.ke/v1/sms/send', {
+      // Send SMS via Mspace API according to their documentation
+      const response = await fetch('https://api.mspace.co.ke/sms/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          to: recipient,
-          message: message,
-          sender_id: sender_id
+          userid: userId,
+          password: apiKey,
+          mobile: recipient,
+          msg: message,
+          senderid: sender_id,
+          msgtype: 0, // Normal SMS
+          duplicatecheck: 1,
+          scheduletime: scheduled_time || '',
         })
       })
 
-      const result = await response.json()
+      const result: MspaceApiResponse = await response.json()
       
-      if (result.success) {
+      if (result.status === 1701 || result.status === 1702) {
+        // Success statuses according to Mspace API docs
+        successCount++
+        
         // Store message in history
         await supabase
           .from('message_history')
@@ -118,8 +130,9 @@ async function sendSMS(request: SMSRequest, apiKey: string, supabase: any): Prom
             content: message,
             status: 'sent',
             provider: 'mspace',
-            provider_message_id: result.data?.message_id,
-            sent_at: new Date().toISOString()
+            provider_message_id: result.data?.msgid || `mspace_${Date.now()}`,
+            sent_at: new Date().toISOString(),
+            user_id: user.id
           })
 
         // Update campaign recipient if campaign_id provided
@@ -131,23 +144,37 @@ async function sendSMS(request: SMSRequest, apiKey: string, supabase: any): Prom
               recipient_type: 'phone',
               recipient_value: recipient,
               status: 'sent',
-              sent_at: new Date().toISOString()
+              sent_at: new Date().toISOString(),
+              provider_message_id: result.data?.msgid
             })
         }
 
-        results.push({ recipient, success: true, message_id: result.data?.message_id })
+        results.push({ 
+          recipient, 
+          success: true, 
+          message_id: result.data?.msgid,
+          status: result.status,
+          message: result.message
+        })
       } else {
-        results.push({ recipient, success: false, error: result.message })
+        // Failed according to Mspace API response codes
+        failedCount++
+        results.push({ 
+          recipient, 
+          success: false, 
+          error: result.message,
+          status: result.status
+        })
       }
     } catch (error) {
       console.error(`SMS send error for ${recipient}:`, error)
+      failedCount++
       results.push({ recipient, success: false, error: error.message })
     }
   }
 
-  // Deduct credits for successful sends
-  const successCount = results.filter(r => r.success).length
-  const actualCost = successCount * smsCount * 0.05
+  // Deduct credits for successful sends only
+  const actualCost = successCount * smsCount * costPerSMS
 
   if (actualCost > 0) {
     await supabase
@@ -162,50 +189,86 @@ async function sendSMS(request: SMSRequest, apiKey: string, supabase: any): Prom
   return new Response(
     JSON.stringify({ 
       success: true, 
-      results,
-      cost: actualCost,
-      sent_count: successCount
+      message: `SMS sending completed`,
+      data: {
+        results,
+        cost: actualCost,
+        sent_count: successCount,
+        failed_count: failedCount,
+        message_ids: results.filter(r => r.success).map(r => r.message_id)
+      }
     }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   )
 }
 
-async function checkBalance(apiKey: string): Promise<Response> {
-  const response = await fetch('https://api.mspace.co.ke/v1/account/balance', {
-    headers: {
-      'Authorization': `Bearer ${apiKey}`
-    }
-  })
+async function checkBalance(apiKey: string, userId: string): Promise<Response> {
+  try {
+    const response = await fetch('https://api.mspace.co.ke/balance/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userid: userId,
+        password: apiKey
+      })
+    })
 
-  const result = await response.json()
-  
-  return new Response(
-    JSON.stringify(result),
-    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  )
+    const result: MspaceApiResponse = await response.json()
+    
+    if (result.status === 1701) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            currency: 'KES',
+            balance: result.data?.balance || '0.00'
+          }
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    } else {
+      throw new Error(result.message || 'Failed to check balance')
+    }
+  } catch (error) {
+    console.error('Balance check error:', error)
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
 }
 
-async function getDeliveryReports(messageIds: string[], apiKey: string, supabase: any): Promise<Response> {
+async function getDeliveryReports(messageIds: string[], apiKey: string, userId: string, supabase: any): Promise<Response> {
   const reports = []
   
   for (const messageId of messageIds) {
     try {
-      const response = await fetch(`https://api.mspace.co.ke/v1/sms/delivery-reports/${messageId}`, {
+      const response = await fetch('https://api.mspace.co.ke/reports/', {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`
-        }
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userid: userId,
+          password: apiKey,
+          msgid: messageId
+        })
       })
 
-      const result = await response.json()
+      const result: MspaceApiResponse = await response.json()
       
-      if (result.success) {
+      if (result.status === 1701) {
+        const deliveryStatus = result.data?.status || 'pending'
+        
         // Update message status in database
         await supabase
           .from('message_history')
           .update({
-            status: result.data.status,
-            delivered_at: result.data.status === 'delivered' ? new Date().toISOString() : null,
-            failed_at: result.data.status === 'failed' ? new Date().toISOString() : null
+            status: deliveryStatus,
+            delivered_at: deliveryStatus === 'delivered' ? new Date().toISOString() : null,
+            failed_at: deliveryStatus === 'failed' ? new Date().toISOString() : null
           })
           .eq('provider_message_id', messageId)
 
@@ -213,13 +276,18 @@ async function getDeliveryReports(messageIds: string[], apiKey: string, supabase
         await supabase
           .from('campaign_recipients')
           .update({
-            status: result.data.status,
-            delivered_at: result.data.status === 'delivered' ? new Date().toISOString() : null,
-            failed_at: result.data.status === 'failed' ? new Date().toISOString() : null
+            status: deliveryStatus,
+            delivered_at: deliveryStatus === 'delivered' ? new Date().toISOString() : null,
+            failed_at: deliveryStatus === 'failed' ? new Date().toISOString() : null
           })
           .eq('provider_message_id', messageId)
 
-        reports.push(result.data)
+        reports.push({
+          message_id: messageId,
+          status: deliveryStatus,
+          delivered_at: result.data?.delivered_at,
+          failed_reason: result.data?.failed_reason
+        })
       }
     } catch (error) {
       console.error(`Delivery report error for ${messageId}:`, error)
