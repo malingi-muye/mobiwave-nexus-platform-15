@@ -78,6 +78,19 @@ export function UserManagement() {
     }
   };
 
+  // Helper function to safely get user roles
+  const getUserRoles = (user: any) => {
+    return Array.isArray(user.user_roles) ? user.user_roles : [];
+  };
+
+  // Helper function to check if user has admin role
+  const hasAdminRole = (user: any) => {
+    const userRoles = getUserRoles(user);
+    return userRoles.some((userRole: any) => 
+      userRole.role && userRole.role.name === 'admin'
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -138,7 +151,7 @@ export function UserManagement() {
               <div>
                 <p className="text-sm font-medium text-gray-600 mb-1">Admins</p>
                 <p className="text-3xl font-bold text-gray-900">
-                  {users.filter(u => u.user_roles.some(ur => ur.role.name === 'admin')).length}
+                  {users.filter(u => hasAdminRole(u)).length}
                 </p>
               </div>
               <div className="p-3 rounded-full bg-purple-50">
@@ -203,67 +216,70 @@ export function UserManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                        <Users className="w-4 h-4 text-gray-600" />
+              {filteredUsers.map((user) => {
+                const userRoles = getUserRoles(user);
+                return (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                          <Users className="w-4 h-4 text-gray-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium">
+                            {user.first_name && user.last_name 
+                              ? `${user.first_name} ${user.last_name}`
+                              : user.email.split('@')[0]
+                            }
+                          </p>
+                          <p className="text-sm text-gray-500">{user.email}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium">
-                          {user.first_name && user.last_name 
-                            ? `${user.first_name} ${user.last_name}`
-                            : user.email.split('@')[0]
-                          }
-                        </p>
-                        <p className="text-sm text-gray-500">{user.email}</p>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {userRoles.map((userRole: any) => (
+                          <Badge key={userRole.id} className={getRoleColor(userRole.role?.name || '')}>
+                            {userRole.role?.name || 'Unknown'}
+                          </Badge>
+                        ))}
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {user.user_roles.map((userRole) => (
-                        <Badge key={userRole.id} className={getRoleColor(userRole.role.name)}>
-                          {userRole.role.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value={user.status}
-                      onValueChange={(value) => handleStatusChange(user.id, value)}
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="inactive">Inactive</SelectItem>
-                        <SelectItem value="suspended">Suspended</SelectItem>
-                        <SelectItem value="banned">Banned</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    {user.last_login 
-                      ? new Date(user.last_login).toLocaleDateString()
-                      : 'Never'
-                    }
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        <Mail className="w-4 h-4" />
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={user.status}
+                        onValueChange={(value) => handleStatusChange(user.id, value)}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                          <SelectItem value="suspended">Suspended</SelectItem>
+                          <SelectItem value="banned">Banned</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      {user.last_login 
+                        ? new Date(user.last_login).toLocaleDateString()
+                        : 'Never'
+                      }
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">
+                          <Mail className="w-4 h-4" />
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>

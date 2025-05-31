@@ -31,19 +31,35 @@ export const useUsers = () => {
   return useQuery({
     queryKey: ['users'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get all users
+      const { data: users, error: usersError } = await supabase
         .from('users')
-        .select(`
-          *,
-          user_roles(
-            id,
-            role:roles(id, name, description)
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data || [];
+      if (usersError) throw usersError;
+
+      // Then get user roles for each user
+      const usersWithRoles = await Promise.all(
+        (users || []).map(async (user) => {
+          const { data: userRoles, error: rolesError } = await supabase
+            .from('user_roles')
+            .select(`
+              id,
+              role:roles(id, name, description)
+            `)
+            .eq('user_id', user.id);
+
+          if (rolesError) {
+            console.error('Error fetching roles for user:', user.id, rolesError);
+            return { ...user, user_roles: [] };
+          }
+
+          return { ...user, user_roles: userRoles || [] };
+        })
+      );
+
+      return usersWithRoles;
     },
   });
 };
@@ -52,20 +68,30 @@ export const useUser = (userId: string) => {
   return useQuery({
     queryKey: ['users', userId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Get user details
+      const { data: user, error: userError } = await supabase
         .from('users')
-        .select(`
-          *,
-          user_roles(
-            id,
-            role:roles(*)
-          )
-        `)
+        .select('*')
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
-      return data;
+      if (userError) throw userError;
+
+      // Get user roles
+      const { data: userRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select(`
+          id,
+          role:roles(*)
+        `)
+        .eq('user_id', userId);
+
+      if (rolesError) {
+        console.error('Error fetching roles for user:', userId, rolesError);
+        return { ...user, user_roles: [] };
+      }
+
+      return { ...user, user_roles: userRoles || [] };
     },
     enabled: !!userId,
   });
